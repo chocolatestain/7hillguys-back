@@ -1,0 +1,44 @@
+spring:
+
+  ## JPA 설정
+  jpa:
+    hibernate:
+      ddl-auto: update
+    generate-ddl: false
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+    database-platform: org.hibernate.dialect.MariaDBDialect
+
+  ## MariaDB 설정
+  datasource:
+    driver-class-name: org.mariadb.jdbc.Driver
+    url: jdbc:mariadb://192.168.0.141:3306/peoch
+    username: root
+    password: 1313
+
+  application:
+    name: peoch
+
+  ## 캐시 설정 (Redis 사용)
+  cache:
+    type: redis
+
+  ## Redis 사용
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+  ## RabbitMQ 설정
+#  rabbitmq:
+#    host: localhost  # RabbitMQ 서버 주소 (로컬 실행 중이라면 그대로 둠)
+#    port: 5672       # 기본 포트
+#    username: guest  # 기본 계정
+#    password: guest  # 기본 비밀번호
+
+## JWT 설정
+jwt:
+  secret: "63fba97a41e0d004e10e8dbbcb9a547819280efb00a54c732aca36a8a58258e4fcc539ffc5159a7f0a7be78b86efe001c12ba6af6debeb0a89e8ce7e82e75455"
+  expiration_time: 1800000  # 30분 (밀리초)
