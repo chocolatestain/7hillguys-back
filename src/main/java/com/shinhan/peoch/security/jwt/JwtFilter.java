@@ -18,7 +18,7 @@ import java.io.IOException;
 @Slf4j
 @RequiredArgsConstructor
 @Component
-public class JwtFilter  extends OncePerRequestFilter {
+public class JwtFilter extends OncePerRequestFilter {
     private final UserService userService;
     private final JwtUtil jwtUtil;
     private final TokenBlacklistService tokenBlacklistService;
@@ -28,28 +28,34 @@ public class JwtFilter  extends OncePerRequestFilter {
             throws ServletException, IOException {
         String authorizationHeader = request.getHeader("Authorization");
 
-        if(authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
             String token = authorizationHeader.substring(7);
 
-            if(tokenBlacklistService.isTokenBlacklisted(token)) {
+            if (tokenBlacklistService.isTokenBlacklisted(token)) {
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 return;
             }
 
-            if(jwtUtil.validationToken(token)) {
-                String email = jwtUtil.getUserEmail(token);
-                log.info("JwtFilter에서 추출된 이메일: {}", email);
-                if (email == null) {
-                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "JWT에서 이메일을 추출할 수 없습니다.");
-                    return;
-                }
-                UserDetails userDetails = userService.loadUserByUsername(email);
-
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+            if (!jwtUtil.validateToken(token)) {
+                log.warn("유효하지 않은 JWT 토큰: {}", token);
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "유효하지 않은 JWT 토큰입니다.");
+                return;
             }
+
+            String email = jwtUtil.getEmailFromToken(token);
+            log.info("JwtFilter에서 추출된 이메일: {}", email);
+
+            if (email == null) {
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "JWT에서 이메일을 추출할 수 없습니다.");
+                return;
+            }
+
+            UserDetails userDetails = userService.loadUserByUsername(email);
+
+            UsernamePasswordAuthenticationToken authentication =
+                    new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+
+            SecurityContextHolder.getContext().setAuthentication(authentication);
         }
         filterChain.doFilter(request, response);
     }

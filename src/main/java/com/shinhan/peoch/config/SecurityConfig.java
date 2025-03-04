@@ -30,8 +30,8 @@ public class SecurityConfig {
 
         httpSecurity.authorizeHttpRequests(auth -> {
             auth.requestMatchers(WHITE_LIST).permitAll();
-            auth.requestMatchers(ADMIN_LIST).hasRole("ADMIN");
-            auth.requestMatchers(USER_LIST).hasRole("USER");
+            auth.requestMatchers(ADMIN_LIST).hasAuthority("ADMIN");
+            auth.requestMatchers(USER_LIST).hasAuthority("USER");
 
             //나머지는 반드시 로그인하고 접근가능
             auth.anyRequest().authenticated();

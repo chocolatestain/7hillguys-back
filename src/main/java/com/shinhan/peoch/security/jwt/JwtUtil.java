@@ -1,92 +1,93 @@
 package com.shinhan.peoch.security.jwt;
 
-import com.shinhan.peoch.auth.entity.UserEntity;
-import io.jsonwebtoken.*;
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
-
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.security.Key;
-import java.time.ZonedDateTime;
+import javax.crypto.SecretKey;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
-@Slf4j
 @Component
 public class JwtUtil {
-    private final Key key;
-    private final long accessTokenExpTime;
 
-    public JwtUtil(
-            @Value("${jwt.secret}") String secretKey,
-            @Value("${jwt.expiration_time}") long accessTokenExpTime
-            ) {
-        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
-        this.key = Keys.hmacShaKeyFor(keyBytes);
-        this.accessTokenExpTime = accessTokenExpTime;
+    //[1] 외부 설정값 주입
+    //"jwt.secret" 키로부터 base64 인코딩된 문자열을 받아옴
+    private final String secret;
+
+    //[2] 실제 시크릿 키(디코딩 결과)를 보관할 필드
+    private final SecretKey key;
+
+    private static final long ACCESS_TOKEN_EXPIRATION = 1000 * 60 * 15; //15분
+    private static final long REFRESH_TOKEN_EXPIRATION = 1000 * 60 * 60 * 24 * 7; //7일
+
+    //[3] 생성자 주입
+    public JwtUtil(@Value("${jwt.secret}") String secretKey) {
+        // base64 디코딩 후 Key 객체 생성
+        byte[] decodedKey = Decoders.BASE64.decode(secretKey);
+        this.key = Keys.hmacShaKeyFor(decodedKey);
+        this.secret = secretKey;
     }
 
-    public String createAccessToken(UserEntity user) {
-        return createToken(user, accessTokenExpTime);
-    }
-
-    private String createToken(UserEntity user, long expireTime) {
-        Claims claims = Jwts.claims();
-        claims.put("userId", user.getUserId());
-        claims.put("userName", user.getName());
-        claims.put("userEmail", user.getEmail());
-        claims.put("userRole", user.getRole());
-
-        ZonedDateTime now = ZonedDateTime.now();
-        ZonedDateTime tokenValidity = now.plusSeconds(expireTime);
-
+    //Access Token 생성
+    public String generateAccessToken(String email, String role) {
         return Jwts.builder()
-                .setClaims(claims) //정보 저장
-                .setIssuedAt(Date.from(now.toInstant()))	//발급 시간
-                .setExpiration(Date.from(tokenValidity.toInstant())) // set 만료시간
-                .signWith(key, SignatureAlgorithm.HS256) // 사용할 암호화 알고리즘과 signature 에 들어갈 secret값 세팅
+                .setClaims(createClaims(email, role))
+                .setSubject(email)
+                .setExpiration(new Date(System.currentTimeMillis() + ACCESS_TOKEN_EXPIRATION))
+                .signWith(key)
                 .compact();
     }
 
-    public String getUserEmail(String token) {
-        Claims claims = parseClaims(token);
-        String email = claims.get("userEmail", String.class);
-
-        if (email == null) {
-            log.error("JWT에서 userEmail을 추출할 수 없음! Claims: {}", claims);
-        }
-        return email;
-//        return parseClaims(token).get("userEmail", String.class);
+    //Refresh Token 생성
+    public String generateRefreshToken(String email) {
+        return Jwts.builder()
+                .setSubject(email)
+                .setExpiration(new Date(System.currentTimeMillis() + REFRESH_TOKEN_EXPIRATION))
+                .signWith(key)
+                .compact();
     }
 
-    public boolean validationToken(String token) {
+    //JWT에서 이메일 및 역할을 담을 Claims 생성
+    private Map<String, Object> createClaims(String email, String role) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("email", email);
+        claims.put("role", role);
+        return claims;
+    }
+
+    //토큰 검증
+    public boolean validateToken(String token) {
         try {
             Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
             return true;
-        } catch (io.jsonwebtoken.security.SecurityException | MalformedJwtException e) {
-            log.info("Invalid JWT Token", e);
-        } catch (ExpiredJwtException e) {
-            log.info("Expired JWT Token", e);
-        } catch (UnsupportedJwtException e) {
-            log.info("Unsupported JWT Token", e);
-        } catch (IllegalArgumentException e) {
-            log.info("JWT claims string is empty.", e);
-        }
-        return false;
-    }
-
-    public Claims parseClaims(String accessToken) {
-        try {
-            return Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(accessToken).getBody();
-        } catch (ExpiredJwtException e) {
-            return e.getClaims();
+        } catch (JwtException e) {
+            return false;
         }
     }
 
-    //JWT 남은 만료 시간 가져오는 메서드
+    //토큰에서 이메일 추출
+    public String getEmailFromToken(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(key)
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .getSubject();
+    }
+
+    //토큰 만료 시간 가져오기
     public long getExpirationTime(String token) {
-        return parseClaims(token).getExpiration().getTime() - System.currentTimeMillis();
+        return Jwts.parserBuilder()
+                .setSigningKey(key)
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .getExpiration()
+                .getTime();
     }
 }

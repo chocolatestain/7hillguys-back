@@ -19,16 +19,19 @@ public class AuthService {
         String email = dto.getEmail();
         String password = dto.getPassword();
         UserEntity user = userRepository.findByEmail(email).orElse(null);
-        if(user == null) {
+
+        if (user == null) {
             throw new UsernameNotFoundException("해당 이메일의 사용자가 존재하지 않습니다.");
         }
 
-        //암호화된 password를 디코딩한 값과 입력한 패스워드 값이 다르면 null 반환
-        if(!passwordEncoder.matches(password, user.getPassword())) {
+        //암호화된 password를 비교
+        if (!passwordEncoder.matches(password, user.getPassword())) {
             throw new BadCredentialsException("비밀번호가 일치하지 않습니다.");
         }
 
-        String accessToken = jwtUtil.createAccessToken(user);
+        //
+        String accessToken = jwtUtil.generateAccessToken(user.getEmail(), user.getRole().name());
+
         return accessToken;
     }
 }
