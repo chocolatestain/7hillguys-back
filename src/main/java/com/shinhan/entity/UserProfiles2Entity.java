@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 @Table(name = "user_profiles2")
 public class UserProfiles2Entity {
     @Id
-    private Integer userId; // Users 테이블과의 외래 키 관계
+    private Long userId; // Users 테이블과의 외래 키 관계
 
     @Column(columnDefinition = "JSON")
     private String letter;
