@@ -1,17 +1,25 @@
 package com.shinhan.peoch.auth.controller;
 
+import java.util.Map;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.shinhan.peoch.auth.dto.UserResponseDTO;
 import com.shinhan.peoch.auth.entity.UserEntity;
 import com.shinhan.peoch.auth.service.UserService;
 import com.shinhan.peoch.security.SecurityUser;
 import com.shinhan.peoch.security.jwt.AuthService;
+
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
+import com.shinhan.peoch.auth.dto.UserNameResponseDTO;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -54,6 +62,13 @@ public class AuthController {
             throw new RuntimeException("인증되지 않은 사용자입니다.");
         }
         return new UserResponseDTO(securityUser.getUserId());
+    }
+    @GetMapping("/userId")
+    public UserNameResponseDTO getCurrentUserName(@AuthenticationPrincipal SecurityUser securityUser) {
+        if (securityUser == null) {
+            throw new RuntimeException("인증되지 않은 사용자입니다.");
+        }
+        return new UserNameResponseDTO(securityUser.getName());
     }
 }
 

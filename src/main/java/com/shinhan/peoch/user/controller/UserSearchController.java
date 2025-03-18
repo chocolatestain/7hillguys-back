@@ -22,8 +22,7 @@ public class UserSearchController {
 
     @Autowired
     private UserSearchService UserSearchService;
-    
-    // GET /api/user/search?query=검색어 형태로 요청을 처리합니다.
+  
     @GetMapping("/search")
     public ResponseEntity<?> searchUsers(@RequestParam("query") String query) {
         // 검색어가 비어있는 경우 400 에러 반환
