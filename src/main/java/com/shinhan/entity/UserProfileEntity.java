@@ -1,3 +1,4 @@
+// UserProfileEntity
 package com.shinhan.entity;
 
 import com.shinhan.peoch.invest.entity.UserProfileFileEntity;
@@ -8,7 +9,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
-@ToString
+@ToString(exclude = "normUserProfile")
 @Getter @Setter @Builder
 @NoArgsConstructor @AllArgsConstructor
 @Entity
@@ -55,4 +56,7 @@ public class UserProfileEntity {
 
     @OneToOne(mappedBy = "userProfile", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private UserProfileFileEntity file;
+
+    @OneToOne(mappedBy = "userProfile")
+    private NormUserProfilesEntity normUserProfile;
 }

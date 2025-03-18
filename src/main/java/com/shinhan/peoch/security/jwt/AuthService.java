@@ -3,6 +3,7 @@ package com.shinhan.peoch.security.jwt;
 import com.shinhan.peoch.auth.entity.UserEntity;
 import com.shinhan.peoch.exception.CustomException;
 import com.shinhan.repository.UserRepository;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -62,12 +63,11 @@ public class AuthService {
      * 로그아웃 메서드
      */
     public void logout(HttpServletRequest request) {
-        String authHeader = request.getHeader("Authorization");
-        String token = authHeader.substring(7); // "Bearer " 제거
+        String token = extractJwtFromCookie(request);
         String email = jwtUtil.getUserEmail(token);
 
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            throw new CustomException("유효하지 않은 토큰입니다.", HttpStatus.UNAUTHORIZED);
+        if (token == null) {
+            throw new CustomException("JWT 토큰이 존재하지 않습니다.", HttpStatus.UNAUTHORIZED);
         }
 
         if (!jwtUtil.validationToken(token)) {
@@ -80,5 +80,20 @@ public class AuthService {
 
         long expirationTime = jwtUtil.getExpirationTime(token);
         tokenBlacklistService.blacklistToken(token, expirationTime);
+    }
+
+    /**
+     * 쿠키에서 JWT 토큰을 가져오는 메서드
+     */
+    private String extractJwtFromCookie(HttpServletRequest request) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if ("jwt".equals(cookie.getName())) { // JWT 쿠키 이름 확인 (프론트에서 보낸 쿠키 이름과 맞춰야 함)
+                    return cookie.getValue();
+                }
+            }
+        }
+        return null;
     }
 }

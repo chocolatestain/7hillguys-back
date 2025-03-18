@@ -2,17 +2,11 @@ package com.shinhan.peoch.lifecycleincome.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.shinhan.entity.ExpectedIncomeEntity;
-import com.shinhan.entity.InflationRateEntity;
-import com.shinhan.entity.InvestmentEntity;
-import com.shinhan.entity.InvestmentStatus;
+import com.shinhan.entity.*;
 import com.shinhan.peoch.auth.entity.UserEntity;
 import com.shinhan.peoch.auth.service.UserService;
 import com.shinhan.peoch.lifecycleincome.DTO.*;
-import com.shinhan.repository.ExpectedIncomeRepository;
-import com.shinhan.repository.InflationRateRepository;
-import com.shinhan.repository.InvestmentRepository;
-import com.shinhan.repository.PaymentRepository;
+import com.shinhan.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -43,6 +37,8 @@ public class InvestmentService {
     ExpectedIncomeService expectedIncomeService;
     @Autowired
     PaymentRepository paymentRepository;
+    @Autowired
+    UserProfileRepository userProfileRepository;
 
     // 투자 정보 저장
     public InvestmentEntity saveInvestment(InvestmentEntity investment) {
@@ -246,9 +242,11 @@ public class InvestmentService {
         return refundAmount;
     }
     public InvestmentTempAllowanceDTO calculateInvestmentDetails(Integer userId) {
+//        System.out.println("여긴 calculateInvestmentDetails");
+//        System.out.println(userId);
         // 투자 데이터 조회
-        InvestmentEntity investment = investmentRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("Invalid grant ID"));
+        InvestmentEntity investment = investmentRepository.findByUserId(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid user ID"));
 
         LocalDate startDate = investment.getStartDate();
         LocalDate endDate = investment.getEndDate();
@@ -271,7 +269,10 @@ public class InvestmentService {
         InflationRateEntity inflationRateEntity = inflationRateRepository.findByYear(LocalDate.now().getYear());
         String inflationRate = inflationRateEntity.getInflationRate();
         double refundRate = updateRefundRate(userId);
-        List<ExpectedIncomeEntity> incomes = expectedIncomeService.getExpectedIncomesByUserProfileId(investment.getUserId());
+        //그래프용 데이터
+        UserProfileEntity userProfileEntity = userProfileRepository.findFirstByUserIdOrderByUpdatedAtDesc(userId)
+                .orElseThrow(() -> new RuntimeException("해당 유저를 찾을 수 없습니다."));
+        List<ExpectedIncomeEntity> incomes = expectedIncomeService.getExpectedIncomesByUserProfileId(userProfileEntity.getUserProfileId());
         // 결과 반환
         return new InvestmentTempAllowanceDTO(availableAmount, investValue, progress, expectedIncome, refundRate, inflationRate,incomes);
     }

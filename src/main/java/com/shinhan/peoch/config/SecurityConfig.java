@@ -64,7 +64,9 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:3000")); // 신뢰할 수 있는 도메인만 허용
+        //추후 배포를 위한 임시 번호 오픈
+        //수정해야함
+        configuration.setAllowedOrigins(List.of("http://localhost:3000","http://192.168.0.32:3000")); // 신뢰할 수 있는 도메인만 허용
         configuration.addAllowedMethod("*");
         configuration.addAllowedHeader("*");
         configuration.setAllowCredentials(true); // 쿠키, 인증 헤더 등을 허용

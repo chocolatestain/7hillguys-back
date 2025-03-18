@@ -2,6 +2,7 @@ package com.shinhan.peoch.lifecycleincome.controller;
 
 import com.shinhan.entity.InvestmentEntity;
 import com.shinhan.entity.UserProfileEntity;
+import com.shinhan.peoch.UserProfileNormalization.perplexity.UserProfileNormalizationPerplexityService;
 import com.shinhan.peoch.invest.service.UserProfileService;
 import com.shinhan.peoch.lifecycleincome.DTO.*;
 import com.shinhan.peoch.lifecycleincome.service.ExitCostService;
@@ -14,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
@@ -44,6 +46,9 @@ public class InvestmentController {
 
     @Autowired
     JwtTokenProvider jwtTokenProvider;
+
+    @Autowired
+    UserProfileNormalizationPerplexityService userProfileNormalizationPerplexityService;
 
     /**
      * investment 생성
@@ -101,7 +106,6 @@ public class InvestmentController {
     @GetMapping("/investment/tempallowance")
     public InvestmentTempAllowanceDTO getInvestmentDetails(
             @CookieValue(value = "jwt", required = false) String jwtToken) {
-        System.out.println("1213111111111111111111");
         if (jwtToken == null || jwtToken.isEmpty()) {
             System.out.println("토큰없어");
             return null;
@@ -113,7 +117,6 @@ public class InvestmentController {
             System.out.println("id가 없엉");
             return null;
         }
-        System.out.println("-------------11111111111");
         Integer userId = userIdLong.intValue();
         System.out.println(investmentService.calculateInvestmentDetails(userId).toString());
         return investmentService.calculateInvestmentDetails(userId);
@@ -321,6 +324,28 @@ public class InvestmentController {
             return ResponseEntity.ok(response); // 200 OK
         } else {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response); // 400 BAD REQUEST
+        }
+    }
+    @GetMapping("/investment/test")
+    public ResponseEntity<?> getInvestmadfils(
+            @CookieValue(value = "jwt", required = false) String jwtToken) {
+        if (jwtToken == null || jwtToken.isEmpty()) {
+            return null;
+        }
+        // JWT에서 userId 추출
+        Long userIdLong = jwtTokenProvider.getUserIdFromToken(jwtToken);
+        if (userIdLong == null) {
+            return null;
+        }
+        Integer userId = userIdLong.intValue();
+
+        try {
+            ResponseEntity<ApiResponseDTO<String>> result = userProfileNormalizationPerplexityService
+                    .normalizeAndSaveUserProfile(userId);
+            return ResponseEntity.ok(result);
+        } catch (ObjectOptimisticLockingFailureException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body("프로필 정규화 중 충돌이 발생했습니다. 잠시 후 다시 시도해주세요.");
         }
     }
 

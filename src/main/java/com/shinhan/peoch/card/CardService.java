@@ -180,6 +180,7 @@ public class CardService {
                                                  LocalDateTime startDate, LocalDateTime endDate) {
         AllBenefitDTO dto = new AllBenefitDTO();
         dto.setBenefit(benefit);
+        dto.setStoreName(benefit.getStore().getName());
 
         // 사용 중인 혜택이면 inUse=true, 놓친 혜택 금액은 0
         if (myBenefitIds.contains(benefit.getBenefitId())) {

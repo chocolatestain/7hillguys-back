@@ -49,7 +49,7 @@ public class UserProfileNormalizationService {
                 .assets(normalizeAssets(userProfile.getAssets()))
                 .criminalRecord(normalizeCriminalRecord(userProfile.getCriminalRecord()))
                 .healthStatus(normalizeHealthStatus(userProfile.getHealthStatus()))
-                .gender(normalizeGender(userProfile.getGender()))
+                .gender(userProfile.getGender())
                 .address(normalizeAddress(userProfile.getAddress()))
                 .mentalStatus(normalizeMentalStatus(userProfile.getMentalStatus()))
                 .build();

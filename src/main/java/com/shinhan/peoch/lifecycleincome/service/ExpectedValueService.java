@@ -4,8 +4,10 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shinhan.entity.ExpectedIncomeEntity;
 import com.shinhan.entity.InflationRateEntity;
+import com.shinhan.entity.UserProfileEntity;
 import com.shinhan.repository.ExpectedIncomeRepository;
 import com.shinhan.repository.InflationRateRepository;
+import com.shinhan.repository.UserProfileRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -21,8 +23,13 @@ public class ExpectedValueService {
     @Autowired
     private InflationRateRepository inflationRateRepository;
 
-    public Double calculatePresentValue(Integer grantId) {
-        List<ExpectedIncomeEntity> incomeEntities = expectedIncomeRepository.findByUserProfileId(grantId);
+    @Autowired
+    UserProfileRepository userProfileRepository;
+
+    public Double calculatePresentValue(Integer userId) {
+        UserProfileEntity userProfile = userProfileRepository.findFirstByUserIdOrderByUpdatedAtDesc(userId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 사용자의 Profile이 존재하지 않습니다."));;
+        List<ExpectedIncomeEntity> incomeEntities = expectedIncomeRepository.findByUserProfileId(userProfile.getUserProfileId());
         if (incomeEntities.isEmpty()) {
             throw new IllegalArgumentException("User not found");
         }

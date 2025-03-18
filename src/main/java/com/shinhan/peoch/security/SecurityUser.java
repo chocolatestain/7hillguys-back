@@ -30,6 +30,7 @@ public class SecurityUser extends User {
     public String getName() {
         return user.getName();
     }
+ 
     private static Collection<? extends GrantedAuthority> makeRole(UserEntity user) {
         Collection<GrantedAuthority> roleList = new ArrayList<>();
         roleList.add(new SimpleGrantedAuthority(ROLE_PREFIX + user.getRole()));

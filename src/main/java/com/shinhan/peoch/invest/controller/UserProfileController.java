@@ -2,7 +2,6 @@ package com.shinhan.peoch.invest.controller;
 
 import com.shinhan.entity.UserProfileEntity;
 import com.shinhan.peoch.invest.dto.UserProfileDTO;
-import com.shinhan.peoch.invest.dto.UserProfileFileDTO;
 import com.shinhan.peoch.invest.service.UserProfileFileService;
 import com.shinhan.peoch.invest.service.UserProfileService;
 import com.shinhan.peoch.security.jwt.JwtTokenProvider;
@@ -22,6 +21,14 @@ public class UserProfileController {
     private final UserProfileFileService userProfileFileService;
     private final JwtTokenProvider jwtTokenProvider;
 
+
+    /**
+     * 1.UserProfileDTO 들어오는대로 저장
+     * 2. 비동기로 normprofile 만들고 저장
+     * @param dto
+     * @param jwt
+     * @return
+     */
     @PostMapping("/save")
     public ResponseEntity<UserProfileEntity> saveUserProfile(@RequestBody UserProfileDTO dto, @CookieValue(value = "jwt", required = false) String jwt) {
         if (jwt == null || jwt.isEmpty()) {

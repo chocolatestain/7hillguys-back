@@ -9,7 +9,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
+ 
+ 
 import com.shinhan.peoch.auth.dto.UserResponseDTO;
 import com.shinhan.peoch.auth.entity.UserEntity;
 import com.shinhan.peoch.auth.service.UserService;
@@ -71,4 +72,4 @@ public class AuthController {
         return new UserNameResponseDTO(securityUser.getName());
     }
 }
-
+ 

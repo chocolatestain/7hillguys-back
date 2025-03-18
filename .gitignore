@@ -39,6 +39,8 @@ auto-import.
 .idea/modules.xml
 .idea/*.iml
 .idea/modules
+.idea/vcs.xml
+.idea/7hillguys-front.iml
 *.iml
 *.ipr
 CMake
@@ -275,4 +277,15 @@ src/main/resources/application.yml
 
 ### macOS 시스템 파일 방지 ###
 .DS_Store.DS_Store
+.DS_Store
+
+# IDE-specific config files
+*.xml
+
+# Ignore IDE and config files
+*.iml
+.idea/
+*.xml
+
+# Ignore macOS system files
 .DS_Store

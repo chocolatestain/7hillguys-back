@@ -39,7 +39,7 @@ public class SetInvestAmountService {
         // 1. 투자 정보 조회
         InvestmentEntity investment = investmentRepository.findFirstByUserIdOrderByUpdatedAtDesc(userProfileEntity.getUserId())
                 .orElseThrow(() -> new UsernameNotFoundException("해당 투자 정보를 찾을 수 없습니다."));
-        System.out.println(investment);
+
         // 2. 예상 소득 데이터 조회
         ExpectedIncomeEntity incomes = expectedIncomeRepository.findFirstByUserProfileIdOrderByCreatedAtDesc(userProfileId).
         orElseThrow(() -> new RuntimeException("사용자 예상 소득 정보를 찾을 수 없습니다."));
@@ -58,6 +58,7 @@ public class SetInvestAmountService {
     public ApiResponseDTO<String> stopInvestment(Long userId) {
         /**
          *   기존 엑시트 비용함수랑 누적 환급 금액이 일치하거나 더 많으면 엑시트 비용은 그 시점에서
+         *   남은 기간 %로만 적용
          */
 
         InvestmentEntity investment = investmentRepository.findInvestmentByUserId(userId);
