@@ -39,15 +39,16 @@ public interface PaymentRepository extends JpaRepository<PaymentEntity, Long> {
                                                      @Param("startDate") LocalDateTime startDate,
                                                      @Param("endDate") LocalDateTime endDate);
 
-
+    // 특정 사용자와 같은 나이인 사용자들의 특정 기간에 대해 평균 결제 금액 반환
     @Query("SELECT AVG(p.finalAmount) " +
             "FROM PaymentEntity p " +
             "JOIN p.card c " +
             "JOIN c.user u " +
-            "WHERE (YEAR(CURRENT_DATE) - YEAR(u.birthdate)) = :age " +
+            "WHERE u.birthdate BETWEEN :birthDateStart AND :birthDateEnd " +
             "AND p.date BETWEEN :startDate AND :endDate")
-    Double findAverageTotalFinalAmountByUserAgeAndDateBetween(
-            @Param("age") int age,
+    Double findAverageTotalFinalAmountByBirthdateBetween(
+            @Param("birthDateStart") java.time.LocalDate birthDateStart,
+            @Param("birthDateEnd") java.time.LocalDate birthDateEnd,
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate);
 
@@ -74,5 +75,14 @@ public interface PaymentRepository extends JpaRepository<PaymentEntity, Long> {
 
 
     List<PaymentEntity> findByStatus(PaymentStatus paymentStatus);
+
+    @Query("SELECT SUM(p.discountAmount) " +
+            "FROM PaymentEntity p " +
+            "JOIN p.card c " +
+            "JOIN c.user u " +
+            "WHERE u.userId = :userId AND p.discountAmount > 0")
+    Integer findTotalDiscountByUserId(@Param("userId") Long userId);
+
+
 
 }

@@ -8,20 +8,23 @@ import com.shinhan.repository.InvestmentRepository;
 import com.shinhan.peoch.invest.service.ContractService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.text.NumberFormat;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
-import java.util.Optional;
 
 @Slf4j
 @RestController
 @RequestMapping("/api/contract")
 @RequiredArgsConstructor
 public class ContractController {
+    //private final RedisTemplate<String, Object> redisTemplate;
     private final InvestmentRepository investmentRepository;
     private final ContractService contractService;
     private final ExpectedValueService expectedValueService;
@@ -33,45 +36,77 @@ public class ContractController {
             @CookieValue(value = "jwt", required = false) String jwtToken) {
 
         if (jwtToken == null || jwtToken.isEmpty()) {
-            log.warn("🚨 [ContractController] JWT 쿠키 없음!");
+            log.warn("[ContractController] JWT 쿠키 없음!");
             return ResponseEntity.status(401).body(Map.of("error", "인증 토큰이 없습니다."));
         }
 
         // JWT에서 userId 추출
         Long userId = jwtTokenProvider.getUserIdFromToken(jwtToken);
         if (userId == null) {
-            log.warn("🚨 [ContractController] JWT에서 userId 추출 실패!");
+            log.warn("[ContractController] JWT에서 userId 추출 실패!");
             return ResponseEntity.status(401).body(Map.of("error", "잘못된 JWT입니다."));
         }
 
-        Optional<InvestmentEntity> investmentOpt = investmentRepository.findById(userId.intValue());
-        if (investmentOpt.isEmpty()) {
+        /*long startTime = System.currentTimeMillis();
+
+        // Redis 캐싱 처리 (캐싱 키: contract:template:{userId})
+        String cacheKey = "contract:template:" + userId;
+        Map<Object, Object> cachedContract = redisTemplate.opsForHash().entries(cacheKey);
+
+        if (cachedContract != null && !cachedContract.isEmpty()) {
+            long endTime = System.currentTimeMillis();  // 종료 시간
+            long elapsedTime = endTime - startTime;
+            log.info("[Redis] 계약서 미리보기 데이터 조회 시간: {} ms", elapsedTime);
+            return ResponseEntity.ok(convertToStringKeyMap(cachedContract));
+        }*/
+
+        InvestmentEntity investmentOpt = investmentRepository.findInvestmentByUserId(userId);
+        if (investmentOpt==null) {
             return ResponseEntity.status(404).body(Map.of("error", "해당 사용자의 계약서 데이터를 찾을 수 없습니다."));
         }
 
-        InvestmentEntity investment = investmentOpt.get();
+        InvestmentEntity investment = investmentOpt;
         Double maxRepaymentAmount = expectedValueService.calculateTotalExpectedIncome(userId.intValue());
 
         // 계약서 기본 내용 (사용자 데이터 포함)
+        NumberFormat nf = NumberFormat.getNumberInstance(Locale.KOREA);
+
+        String monthlyAllowanceStr = nf.format(investment.getMonthlyAllowance());
+        String originalInvestValueStr = nf.format(investment.getOriginalInvestValue());
+
         Map<String, Object> contractData = new HashMap<>();
         contractData.put("title", "계약 사항");
-        contractData.put("investmentDetails", String.format(
-                "투자자는 %s부터 %s까지 매월 %d 원을 지급받으며, 총 %d 원을 지원받습니다. " +
-                        "최대 투자 금액은 %d 원이며, 투자금액 변동에 따라 상환 비율이 조정됩니다.",
-                investment.getStartDate(), investment.getEndDate(),
-                investment.getMonthlyAllowance(), investment.getOriginalInvestValue(),
-                investment.getMaxInvestment()));
+        contractData.put("investmentDate", String.format(
+                "기간: %s ~ %s", investment.getStartDate(), investment.getEndDate()));
+        contractData.put("monthlyAllowance", String.format(
+                "지원금액: 월 %s 원", monthlyAllowanceStr));
+        contractData.put("investmentMoney",String.format(
+                "총지원금액: %s 원", originalInvestValueStr));
 
         contractData.put("repaymentTerms", String.format(
-                "돈을 갚는 날은 %s부터 시작되며, 55세가 되는 년도까지 입니다." +
-                        "월 상환 금액은 %.3f%%이며, 최대 상환 금액은 %.0f 원입니다.",
-                investment.getEndDate(),investment.getRefundRate(), maxRepaymentAmount));
+                "소득 발생 시점부터 55세까지"));
+        contractData.put("repaymentTerms2", String.format(
+                "월 상환 금액: %.3f%%",
+                investment.getRefundRate()));
+
+        /*contractData.put("agreements", new String[]{
+                "본 계약서는 상호 동의 하에 체결됩니다." +
+                        "이용자는 중도에 계약을 해지할 수 있습니다." +
+                        "단, 최대 상환 금액이 부과될 수 있습니다." +
+                        "상환 일정은 변동될 수 있으며, 연체 시 이자가 부과될 수 있습니다.",
+        });*/
 
         contractData.put("agreements", new String[]{
                 "본 계약서는 상호 동의 하에 체결됩니다.",
-                "이용자는 중도에 계약을 해지할 수 있습니다. 단, 최대 상환 금액이 부과될 수 있습니다.",
-                "상환 일정은 변동될 수 있으며, 연체 시 이자가 부과될 수 있습니다."
+                "이용자는 중도 계약 해지 가능합니다.",
+                "단, 최대 상환 금액이 부과될 수 있습니다.",
+                "상환 일정은 변동될 수 있으며, ",
+                "연체 시 이자가 부과될 수 있습니다.",
         });
+
+        // Redis에 계약서 데이터 캐싱
+        /*redisTemplate.opsForHash().putAll(cacheKey, contractData);
+        redisTemplate.expire(cacheKey, Duration.ofMinutes(10));*/
 
         return ResponseEntity.ok(contractData);
     }
@@ -83,14 +118,14 @@ public class ContractController {
             @RequestBody SignDTO request) {
 
         if (jwtToken == null || jwtToken.isEmpty()) {
-            log.warn("🚨 [ContractController] JWT 쿠키 없음! 서명 요청 차단.");
+            log.warn("[ContractController] JWT 쿠키 없음! 서명 요청 차단.");
             return ResponseEntity.status(401).body(null);
         }
 
         // JWT에서 userId 추출
         Long userIdLong = jwtTokenProvider.getUserIdFromToken(jwtToken);
         if (userIdLong == null) {
-            log.warn("🚨 [ContractController] JWT에서 userId 추출 실패!");
+            log.warn("[ContractController] JWT에서 userId 추출 실패!");
             return ResponseEntity.status(401).body(null);
         }
 
@@ -98,6 +133,7 @@ public class ContractController {
         Integer userId = userIdLong.intValue();
 
         try {
+
             byte[] pdf = contractService.generateAndSaveContractPdf(userId, request.getBase64Signature());
 
             HttpHeaders headers = new HttpHeaders();
@@ -105,12 +141,20 @@ public class ContractController {
             //headers.setContentDispositionFormData("filename", "signed_contract.pdf");
             headers.add(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=signed_contract.pdf");
 
-            log.info("✅ 계약서 PDF 생성 성공! userId={}, 크기: {} bytes", userId, pdf.length);
+            log.info("계약서 PDF 생성 성공! userId={}, 크기: {} bytes", userId, pdf.length);
 
             return ResponseEntity.ok().headers(headers).body(pdf);
         } catch (Exception e) {
-            log.error("🚨 계약서 서명 중 오류 발생! userId: {}", userId, e);
+            log.error("계약서 서명 중 오류 발생! userId: {}", userId, e);
             return ResponseEntity.internalServerError().body(null);
         }
     }
+
+    /*private Map<String, Object> convertToStringKeyMap(Map<Object, Object> map) {
+        Map<String, Object> result = new HashMap<>();
+        for (Map.Entry<Object, Object> entry : map.entrySet()) {
+            result.put(String.valueOf(entry.getKey()), entry.getValue());
+        }
+        return result;
+    }*/
 }

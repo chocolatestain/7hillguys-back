@@ -1,8 +1,8 @@
 package com.shinhan.peoch.lifecycleincome.controller;
 
-import com.shinhan.entity.InvestmentEntity;
 import com.shinhan.entity.UserProfileEntity;
 import com.shinhan.peoch.UserProfileNormalization.perplexity.UserProfileNormalizationPerplexityService;
+import com.shinhan.peoch.UserProfileNormalization.service.AsyncProcessingService;
 import com.shinhan.peoch.invest.service.UserProfileService;
 import com.shinhan.peoch.lifecycleincome.DTO.*;
 import com.shinhan.peoch.lifecycleincome.service.ExitCostService;
@@ -50,28 +50,31 @@ public class InvestmentController {
     @Autowired
     UserProfileNormalizationPerplexityService userProfileNormalizationPerplexityService;
 
-    /**
-     * investment 생성
-     * 해당 userid에 초기 investment 만듬
-     * @param jwtToken
-     * @return
-     */
-    @PostMapping("/investment")
-    public InvestmentEntity saveInvestment(
-            @CookieValue(value = "jwt", required = false) String jwtToken) {
-        if (jwtToken == null || jwtToken.isEmpty()) {
-            return null;
-        }
+    @Autowired
+    AsyncProcessingService asyncProcessingService;
 
-        // JWT에서 userId 추출
-        Long userIdLong = jwtTokenProvider.getUserIdFromToken(jwtToken);
-        if (userIdLong == null) {
-            return null;
-        }
-        Integer userId = userIdLong.intValue();
-
-        return investmentService.createInvestment(userId);
-    }
+//    /**
+//     * investment 생성
+//     * 해당 userid에 초기 investment 만듬
+//     * @param jwtToken
+//     * @return
+//     */
+//    @PostMapping("/investment")
+//    public InvestmentEntity saveInvestment(
+//            @CookieValue(value = "jwt", required = false) String jwtToken) {
+//        if (jwtToken == null || jwtToken.isEmpty()) {
+//            return null;
+//        }
+//
+//        // JWT에서 userId 추출
+//        Long userIdLong = jwtTokenProvider.getUserIdFromToken(jwtToken);
+//        if (userIdLong == null) {
+//            return null;
+//        }
+//        Integer userId = userIdLong.intValue();
+//
+//        return investmentService.createOrUpdateInvestment(userId,userProfileId);
+//    }
 
 
     /**
@@ -118,7 +121,7 @@ public class InvestmentController {
             return null;
         }
         Integer userId = userIdLong.intValue();
-        System.out.println(investmentService.calculateInvestmentDetails(userId).toString());
+//        System.out.println(investmentService.calculateInvestmentDetails(userId).toString());
         return investmentService.calculateInvestmentDetails(userId);
     }
 
@@ -171,6 +174,7 @@ public class InvestmentController {
         Integer userId = userIdLong.intValue();
 
         ReallyExitResponseDTO response = investmentService.getInvestmentExitInfo(userId);
+        System.out.println(response);
         return ResponseEntity.ok(response);
     }
 
@@ -192,9 +196,8 @@ public class InvestmentController {
             return ResponseEntity.status(401).body(null);
         }
         Integer userId = userIdLong.intValue();
-
         //UserID에 해당되는 profile 중에 가장 최신 profile챙겨옴
-        UserProfileEntity userProfileEntity = userProfileService.findUserProfileByUserIdOrderByUpdatedAtDesc(Long.valueOf(userId));
+        UserProfileEntity userProfileEntity = userProfileService.findUserProfileByUserIdOrderByUpdatedAtDesc(userId);
         SetInvestAmountDTO response = setInvestAmountService.getInvestmentData(userProfileEntity.getUserProfileId());
         return ResponseEntity.ok(response);
     }
@@ -293,6 +296,7 @@ public class InvestmentController {
 
     /**
      * SetAmountRequestDTO기반으로 investment 설정
+     * 투자 날짜가 오늘로 설정됨
      * @param jwtToken
      * @param requestDTO
      * @return
@@ -318,7 +322,6 @@ public class InvestmentController {
 
         // 투자 설정
         ApiResponseDTO<String> response = setInvestAmountService.setInvestment(userId, requestDTO);
-        System.out.println(response);
         // 결과 리턴
         if (response.isSuccess()) {
             return ResponseEntity.ok(response); // 200 OK
@@ -326,28 +329,35 @@ public class InvestmentController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response); // 400 BAD REQUEST
         }
     }
-    @GetMapping("/investment/test")
+    @GetMapping("/investment/test/{userProfileId}")
     public ResponseEntity<?> getInvestmadfils(
+            @PathVariable("userProfileId") Long userProfileId,
             @CookieValue(value = "jwt", required = false) String jwtToken) {
-        if (jwtToken == null || jwtToken.isEmpty()) {
-            return null;
-        }
-        // JWT에서 userId 추출
-        Long userIdLong = jwtTokenProvider.getUserIdFromToken(jwtToken);
-        if (userIdLong == null) {
-            return null;
-        }
-        Integer userId = userIdLong.intValue();
+//        if (jwtToken == null || jwtToken.isEmpty()) {
+//            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("JWT 토큰이 없거나 비어있습니다.");
+//        }
+//
+//        // JWT에서 userId 추출
+//        Long userIdLong = jwtTokenProvider.getUserIdFromToken(jwtToken);
+//        if (userIdLong == null) {
+//            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("유효하지 않은 JWT 토큰입니다.");
+//        }
+//        Integer userId = userIdLong.intValue();
 
         try {
-            ResponseEntity<ApiResponseDTO<String>> result = userProfileNormalizationPerplexityService
-                    .normalizeAndSaveUserProfile(userId);
-            return ResponseEntity.ok(result);
+//            ResponseEntity<ApiResponseDTO<String>> result = userProfileNormalizationPerplexityService
+//                    .normalizeAndSaveUserProfile(Math.toIntExact(userProfileId));
+//            ResponseEntity<ApiResponseDTO<String>> result = userProfileNormalizationPerplexityService
+//                    .normalizeProfileToExpectedIncome(Math.toIntExact(userProfileId));
+            asyncProcessingService.profileToExpectedIncome(Math.toIntExact(userProfileId), 39);
+
+            return ResponseEntity.ok(userProfileId);
         } catch (ObjectOptimisticLockingFailureException e) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body("프로필 정규화 중 충돌이 발생했습니다. 잠시 후 다시 시도해주세요.");
         }
     }
+
 
 
 }

@@ -3,10 +3,11 @@ package com.shinhan.peoch.lifecycleincome.service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shinhan.entity.ExpectedIncomeEntity;
-import com.shinhan.entity.InflationRateEntity;
+import com.shinhan.entity.InvestmentEntity;
 import com.shinhan.entity.UserProfileEntity;
 import com.shinhan.repository.ExpectedIncomeRepository;
 import com.shinhan.repository.InflationRateRepository;
+import com.shinhan.repository.InvestmentRepository;
 import com.shinhan.repository.UserProfileRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -26,33 +27,40 @@ public class ExpectedValueService {
     @Autowired
     UserProfileRepository userProfileRepository;
 
+    @Autowired
+    InvestmentRepository investmentRepository;
+
     public Double calculatePresentValue(Integer userId) {
-        UserProfileEntity userProfile = userProfileRepository.findFirstByUserIdOrderByUpdatedAtDesc(userId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 사용자의 Profile이 존재하지 않습니다."));;
-        List<ExpectedIncomeEntity> incomeEntities = expectedIncomeRepository.findByUserProfileId(userProfile.getUserProfileId());
-        if (incomeEntities.isEmpty()) {
-            throw new IllegalArgumentException("User not found");
-        }
+        UserProfileEntity userProfile = userProfileRepository.findLatestProfileWithExpectedIncome(userId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 사용자의 Profile이 존재하지 않습니다."));
+        InvestmentEntity invest = investmentRepository.findInvestmentByUserId(userId);
+//        System.out.println(userProfile);
+//        List<ExpectedIncomeEntity> incomeEntities = expectedIncomeRepository.findByUserProfileId(userProfile.getUserProfileId());
+//        if (incomeEntities.isEmpty()) {
+//            throw new IllegalArgumentException("User not found");
+//        }
 
-        ExpectedIncomeEntity latestIncomeEntity = incomeEntities.get(incomeEntities.size() - 1);
-        Map<Integer, Double> expectedIncome = parseJsonToMap(latestIncomeEntity.getExpectedIncome());
-
-        InflationRateEntity inflationRateEntity = inflationRateRepository.findByYear(2025);
-        Map<Integer, Double> inflationRates = parseJsonToMap(inflationRateEntity.getInflationRate());
-
-        double totalPresentValue = 0.0;
-        for (Map.Entry<Integer, Double> entry : expectedIncome.entrySet()) {
-            int year = entry.getKey();
-            double income = entry.getValue();
-            double discountRate = getDiscountRate(year, inflationRates);
-            totalPresentValue += calculatePresentValueForIncome(income, year, discountRate);
-        }
-
-        return totalPresentValue;
+//        ExpectedIncomeEntity latestIncomeEntity = incomeEntities.get(incomeEntities.size() - 1);
+//        Map<Integer, Double> expectedIncome = parseJsonToMap(latestIncomeEntity.getExpectedIncome());
+//
+//        InflationRateEntity inflationRateEntity = inflationRateRepository.findByYear(2025);
+//        Map<Integer, Double> inflationRates = parseJsonToMap(inflationRateEntity.getInflationRate());
+//
+//        double totalPresentValue = 0.0;
+//        for (Map.Entry<Integer, Double> entry : expectedIncome.entrySet()) {
+//            int year = entry.getKey();
+//            double income = entry.getValue();
+//            double discountRate = getDiscountRate(year, inflationRates);
+//            totalPresentValue += calculatePresentValueForIncome(income, year, discountRate);
+//        }
+        Double returnvalue = Double.valueOf(invest.getMaxInvestment());
+        return returnvalue;
     }
     //생애 주기 소득 총합
-    public Double calculateTotalExpectedIncome(Integer grantId) {
-        List<ExpectedIncomeEntity> incomeEntities = expectedIncomeRepository.findByUserProfileId(grantId);
+    public Double calculateTotalExpectedIncome(Integer userId) {
+        UserProfileEntity userProfileEntity = userProfileRepository.findFirstByUserIdOrderByUpdatedAtDesc(userId)
+                .orElseThrow(() -> new RuntimeException("User profile이 없음"));
+        List<ExpectedIncomeEntity> incomeEntities = expectedIncomeRepository.findByUserProfileId(userProfileEntity.getUserProfileId());
         if (incomeEntities.isEmpty()) {
             throw new IllegalArgumentException("유저가 없어용");
         }

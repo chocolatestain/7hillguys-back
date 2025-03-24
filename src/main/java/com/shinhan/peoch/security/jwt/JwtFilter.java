@@ -41,7 +41,7 @@ public class JwtFilter extends OncePerRequestFilter {
             return;
         }
 
-        log.info("[JwtFilter] 추출된 JWT: {}", token);
+//        log.info("[JwtFilter] 추출된 JWT: {}", token);
 
         // 2️⃣ 블랙리스트 확인
         if (tokenBlacklistService.isTokenBlacklisted(token)) {
@@ -67,7 +67,7 @@ public class JwtFilter extends OncePerRequestFilter {
             return;
         }
 
-        log.info("[JwtFilter] 추출된 사용자 정보: 이메일={}, userId={}", email, userId);
+//        log.info("[JwtFilter] 추출된 사용자 정보: 이메일={}, userId={}", email, userId);
 
         // 5️⃣ 사용자 인증 및 SecurityContext 업데이트
         UserDetails userDetails = userService.loadUserByUsername(email);
@@ -81,7 +81,7 @@ public class JwtFilter extends OncePerRequestFilter {
                 new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
         SecurityContextHolder.getContext().setAuthentication(authentication);
         request.setAttribute("userId", userId); // ✅ userId를 request에 저장
-        log.info("[JwtFilter] 사용자 인증 완료. SecurityContext 업데이트됨. 사용자: {}", email);
+//        log.info("[JwtFilter] 사용자 인증 완료. SecurityContext 업데이트됨. 사용자: {}", email);
 
         filterChain.doFilter(request, response);
     }

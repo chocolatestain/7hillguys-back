@@ -8,6 +8,6 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 public class studentCardDTO {
-    private String highscool;
-    private String highscoolGPA;
+    private String highschool;
+    private String highschoolGPA;
 }

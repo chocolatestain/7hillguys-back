@@ -10,7 +10,15 @@ import org.springframework.web.server.ResponseStatusException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-
+    //에러코드가 안보여서 주석처리했어요 문제 된다면 삭제 부탁드려요!
+    /**
+     * CustomException 처리 (예외별로 상태 코드 설정 가능)
+     */
+    @ExceptionHandler(CustomException.class)
+    public ResponseEntity<ErrorResponseDTO> handleCustomException(CustomException e) {
+        return ResponseEntity.status(e.getStatus())
+                .body(new ErrorResponseDTO(e.getMessage(), e.getStatus().value()));
+    }
     /**
      * CustomException 처리 (예외별로 상태 코드 설정 가능)
      */

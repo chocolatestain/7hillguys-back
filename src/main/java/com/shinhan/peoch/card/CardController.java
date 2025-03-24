@@ -1,10 +1,12 @@
 package com.shinhan.peoch.card;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.shinhan.peoch.security.jwt.JwtTokenProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -12,11 +14,14 @@ import java.util.List;
 public class CardController {
 
     private final CardService cardService;
-    private final CardDataService cardDataService;
+    private final CardDataTotalService cardDataTotalService;
+    private final CardDataMapService cardDataMapService;
 
-    public CardController(CardService cardService, CardDataService cardDataService) {
+    public CardController(CardService cardService, CardDataTotalService cardDataTotalService,
+                          CardDataMapService cardDataMapService) {
         this.cardService = cardService;
-        this.cardDataService = cardDataService;
+        this.cardDataTotalService = cardDataTotalService;
+        this.cardDataMapService = cardDataMapService;
     }
 
     @Autowired
@@ -72,10 +77,10 @@ public class CardController {
         return cardService.getAllBenefit(userId);
     }
 
-    // 관리자 대시보드에서 카드 데이터 요청
-    @GetMapping("/cardData")
-    public CardDataResponseDTO getCardData(@CookieValue(value = "jwt", required = false) String jwtToken,
-                                           @RequestParam String date) {
+    // 관리자 대시보드에서 카드 데이터(Total) 요청
+    @GetMapping("/cardDataTotal")
+    public CardDataTotalResponseDTO getCardDataTotal(@CookieValue(value = "jwt", required = false) String jwtToken,
+                                              @RequestParam String date) {
         if (jwtToken == null || jwtToken.isEmpty()) {
             return null;
         }
@@ -86,7 +91,45 @@ public class CardController {
             return null;
         }
 
-        return cardDataService.getCardData(userId, date);
+//        CardDataTotalResponseDTO response = cardDataTotalService.getCardDataTotal(userId, date);
+//        ObjectMapper mapper = new ObjectMapper();
+//        mapper.enable(SerializationFeature.INDENT_OUTPUT);
+//        try {
+//            String prettyJson = mapper.writeValueAsString(response);
+//            System.out.println(prettyJson);
+//        } catch (JsonProcessingException e) {
+//            e.printStackTrace();
+//        }
+
+        return cardDataTotalService.getCardDataTotal(userId, date);
+    }
+
+    // 관리자 대시보드에서 카드 데이터(Map) 요청
+    @GetMapping("/cardDataMap")
+    public CardDataMapResponseDTO getCardDataMap(@CookieValue(value = "jwt", required = false) String jwtToken,
+                                              @RequestParam String date) {
+        if (jwtToken == null || jwtToken.isEmpty()) {
+            return null;
+        }
+
+        // JWT에서 userId 추출
+        Long userId = jwtTokenProvider.getUserIdFromToken(jwtToken);
+        if (userId == null) {
+            return null;
+        }
+
+//        CardDataMapResponseDTO response = cardDataMapService.getCardDataMap(userId, date);
+//        ObjectMapper mapper = new ObjectMapper();
+//        mapper.enable(SerializationFeature.INDENT_OUTPUT);
+//        try {
+//            String prettyJson = mapper.writeValueAsString(response);
+//            System.out.println(prettyJson);
+//        } catch (JsonProcessingException e) {
+//            e.printStackTrace();
+//        }
+
+
+        return cardDataMapService.getCardDataMap(userId, date);
     }
 
 }

@@ -1,6 +1,7 @@
 package com.shinhan.peoch.payment;
 
 import com.shinhan.entity.*;
+import com.shinhan.peoch.card.BenefitStatementResponseDTO;
 import com.shinhan.repository.*;
 import org.springframework.stereotype.Service;
 
@@ -86,10 +87,10 @@ public class PaymentService {
                 .originalAmount(request.getAmount())
                 .discountAmount(discountAmount)
                 .finalAmount(finalAmount)
-                .date(LocalDateTime.now())
+                .date(request.getPaymentDate())
                 .status(installmentMonth > 1 ? PaymentStatus.PENDING : PaymentStatus.PAID)
                 .installmentMonth(installmentMonth)
-                .installmentRound(installmentMonth > 1 ? 0 : 1)
+                .installmentRound(installmentMonth > 1 ? 1 : 0)
                 .card(card)
                 .store(store)
                 .benefit(usedBenefitId != null ? benefitEntity : null)
@@ -117,7 +118,7 @@ public class PaymentService {
             }
 
             // 카드 만료일 검사
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM/yy");
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yy/MM");
             YearMonth expYearMonth = YearMonth.parse(card.getExpirationDate(), formatter); // 카드 만료일 YearMonth 객체로 변환
             YearMonth currentYearMonth = YearMonth.now(); // 현재 연월(YearMonth)
 
@@ -267,6 +268,19 @@ public class PaymentService {
         cardRepository.save(card);
 
         return new PosResponse(true, "환불이 완료되었습니다.", "REFUND_APPROVED");
+    }
+
+    // 전체 기간 할인 금액 조회
+    public BenefitStatementResponseDTO getTotalBenefit(Long userId) {
+        Integer totalBenefit = paymentRepository.findTotalDiscountByUserId(userId);
+
+        BenefitStatementResponseDTO dto = new BenefitStatementResponseDTO();
+        dto.setTotalBenefit(totalBenefit);
+        dto.setStatementList(null);
+        dto.setTotalBenefitDiscount(null);
+        dto.setUserName(null);
+
+        return dto;
     }
 
 }

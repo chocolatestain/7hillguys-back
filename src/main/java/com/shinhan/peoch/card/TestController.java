@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.Optional;
 
 @RestController
@@ -79,6 +80,18 @@ public class TestController {
 
         myBenefitRepository.save(myBenefit);
         return ResponseEntity.status(HttpStatus.CREATED).body("save OK");
+    }
+
+    @PostMapping("/storeBulkInsert")
+    public ResponseEntity<List<StoreEntity>> createStores(@RequestBody List<StoreEntity> stores) {
+        List<StoreEntity> savedStores = storeRepository.saveAll(stores);
+        return ResponseEntity.status(HttpStatus.CREATED).body(savedStores);
+    }
+
+    @PostMapping("/bulkInsert")
+    public ResponseEntity<List<BenefitEntity>> createBenefits(@RequestBody List<BenefitEntity> benefits) {
+        List<BenefitEntity> savedBenefits = benefitRepository.saveAll(benefits);
+        return ResponseEntity.status(HttpStatus.CREATED).body(savedBenefits);
     }
 
 }

@@ -11,13 +11,18 @@ import com.shinhan.repository.CardDesignRepository;
 import com.shinhan.repository.CardRepository;
 import com.shinhan.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Random;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CardApplicationService {
@@ -35,17 +40,24 @@ public class CardApplicationService {
         UserEntity user = userRepository.findById(userid)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
-        // (3) 카드 엔티티 생성
+
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yy/MM");
+
+// 한국 표준시로 오늘 날짜를 가져옴
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
+        LocalDate fiveYearsLater = today.plusYears(5);
+
         CardEntity newCard = CardEntity.builder()
                 .cardNumber(cardNumber)
                 .enName(cardDTO.getEnglishName())
                 .password(cardDTO.getPin())
                 .cvc(generateCVC())
-                .issuedDate("25/03")
-                .expirationDate("30/03")
+                .issuedDate(today.format(formatter))          // 예: 오늘이 2025-03-19이면 "25/03"
+                .expirationDate(fiveYearsLater.format(formatter)) // 5년 뒤, 예: "30/03"
                 .status(CardStatus.ACTIVE)
-                .monthlyAllowance(1000000)
-                .tempAllowance(100000)
+                .monthlyAllowance(cardDTO.getMonthlyAllowance())
+                .tempAllowance(0)
                 .monthlySpent(0)
                 .user(user)
                 .build();
@@ -105,7 +117,7 @@ public class CardApplicationService {
             }
             String originalFilename = imageFile.getOriginalFilename();
             String extension = originalFilename.substring(originalFilename.lastIndexOf("."));
-            String filename = username + "_" + System.currentTimeMillis() + extension;
+            String filename = "username" + "_" + System.currentTimeMillis() + extension;
             File destFile = new File(dir, filename);
             imageFile.transferTo(destFile);
             return "image/" + filename;

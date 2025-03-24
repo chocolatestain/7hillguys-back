@@ -49,8 +49,8 @@ public class ExitCostService {
         Integer userProfileIdLast=  userProfileEntityLast.getUserProfileId();
 
         InvestmentEntity investmentEntity = investmentService.findInvestmentByUserId(userId) .orElseThrow(() -> new RuntimeException("사용자 투자 정보를 찾을 수 없습니다."));
-        ExpectedIncomeEntity firstExpectedIncomeEntity = expectedIncomeRepository.findFirstByUserProfileIdOrderByCreatedAtDesc(userProfileIdFirst).orElseThrow(() -> new RuntimeException("사용자 예상 소득 정보를 찾을 수 없습니다."));
-        ExpectedIncomeEntity lastExpectedIncomeEntity = expectedIncomeRepository.findFirstByUserProfileIdOrderByCreatedAtAsc(userProfileIdLast).orElseThrow(() -> new RuntimeException("사용자 예상 소득 정보를 찾을 수 없습니다."));
+        ExpectedIncomeEntity firstExpectedIncomeEntity = expectedIncomeRepository.findFirstByUserProfileOrderByCreatedAtDesc(userProfileEntityFirst).orElseThrow(() -> new RuntimeException("사용자 예상 소득 정보를 찾을 수 없습니다."));
+        ExpectedIncomeEntity lastExpectedIncomeEntity = expectedIncomeRepository.findFirstByUserProfileOrderByCreatedAtAsc(userProfileEntityLast).orElseThrow(() -> new RuntimeException("사용자 예상 소득 정보를 찾을 수 없습니다."));
 
         ExitResponseDTO exitResponseDTO= ExitResponseDTO.builder()
                 .firstExpectedIncome(firstExpectedIncomeEntity.getExpectedIncome())

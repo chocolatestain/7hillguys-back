@@ -89,15 +89,27 @@ public class InvestmentService {
             throw new IllegalArgumentException("해당 투자 정보를 찾을 수 없습니다. ID: " + userId);
         }
     }
-    public InvestmentEntity createInvestment(Integer userId) {
-        // 예상 소득 데이터 가져오기
-        List<ExpectedIncomeEntity> incomeEntities = expectedIncomeRepository.findByUserProfileId(userId);
-        if (incomeEntities.isEmpty()) {
-            throw new IllegalArgumentException("User not found");
-        }
+    /**
+     사용자의 예상 소득 데이터를 기반으로 투자 엔티티를 생성
+     국채 수익률을 할인율로 사용
+     사용자 연령 기준 투자 종료일(55세)
 
-        // 가장 최근의 예상 소득 데이터 사용
-        ExpectedIncomeEntity latestIncomeEntity = incomeEntities.get(incomeEntities.size() - 1);
+     @param userId 투자 엔티티를 생성할 사용자의 ID
+
+     @return 생성된 투자 엔티티
+
+     @throws RuntimeException 사용자 프로필을 찾을 수 없는 경우
+
+     @throws IllegalArgumentException 예상 소득 데이터가 없는 경우
+     */
+    public InvestmentEntity createOrUpdateInvestment(Integer userId, Integer userProfileId) {
+        // 예상 소득 데이터 가져오기
+        UserProfileEntity userProfileEntity = userProfileRepository.findByUserProfileId(userProfileId);
+
+        System.out.println(userProfileEntity);
+        ExpectedIncomeEntity latestIncomeEntity = expectedIncomeRepository.findByUserProfileIdOptional(userProfileEntity.getUserProfileId())
+                .orElseThrow(() -> new RuntimeException("아직 소득 데이터가 생성되지 않았습니다."));
+
         Map<Integer, Double> expectedIncome = parseJsonToMap(latestIncomeEntity.getExpectedIncome());
 
         // 국채 수익률 데이터 가져오기
@@ -112,35 +124,49 @@ public class InvestmentService {
             double discountRate = getDiscountRate(year, inflationRates);
             totalPresentValue += calculatePresentValueForIncome(income, year, discountRate);
         }
+
         // 나이 가져와!
         UserEntity user = userService.getUserById(Long.valueOf(userId));
-        // InvestmentEntity 생성 및 저장
+
         // 연 수익률 계산
         LocalDate endDate = calculateEndDate(user.getBirthdate());
-        // 3. 연 수익률 계산
         double annualizedReturnRate = calculateAnnualizedReturnRate(
                 LocalDate.now(),  // 시작일: 현재 날짜
                 endDate,          // 종료일: 55세 생일
                 rateofreturn
         );
-        // InvestmentEntity 생성 및 저장
-        InvestmentEntity investment = InvestmentEntity.builder()
-                .userId(userId)
-                .expectedIncome(latestIncomeEntity.getExpectedIncome())
-                .status(InvestmentStatus.대기) // 승인 대기중 상태
-                .originalInvestValue(0L)
-                .monthlyAllowance(0)
-                .isActive(false)
-                .maxInvestment((int)((totalPresentValue)*(0.2)/(1+annualizedReturnRate))) // 연 수익률 적용
-                .investValue(0L)
-                .refundRate(0.0)
-                .tempAllowance(0)
-                .startDate(LocalDate.now()) // 투자 시작 날짜를 임시로 설정(투자 승인날에 업데이트 해줘야함)
-                .endDate(LocalDate.now()) // 사용자가 정한 투자 기간 최대 10년
-                .build();
 
-        return investmentRepository.save(investment);
+        // 기존 투자 확인
+        Optional<InvestmentEntity> existingInvestment = investmentRepository.findByUserId(userId);
+
+        if (existingInvestment.isPresent()) {
+            // 기존 투자 업데이트
+            InvestmentEntity investment = existingInvestment.orElseThrow();
+            investment.setExpectedIncome(latestIncomeEntity.getExpectedIncome());
+            investment.setMaxInvestment((int)((totalPresentValue)*(0.2)/(1+annualizedReturnRate)));
+            // 다른 필드들은 기존 값 유지
+            return investmentRepository.save(investment);
+        } else {
+            // 새 투자 생성
+            InvestmentEntity investment = InvestmentEntity.builder()
+                    .userId(userId)
+                    .expectedIncome(latestIncomeEntity.getExpectedIncome())
+                    .status(InvestmentStatus.대기) // 승인 대기중 상태
+                    .originalInvestValue(0L)
+                    .monthlyAllowance(0)
+                    .isActive(false)
+                    .maxInvestment((int)((totalPresentValue)*(0.2)/(1+annualizedReturnRate))) // 연 수익률 적용
+                    .investValue(0L)
+                    .refundRate(0.0)
+                    .tempAllowance(0)
+                    .startDate(LocalDate.now()) // 투자 시작 날짜를 임시로 설정(투자 승인날에 업데이트 해줘야함)
+                    .endDate(LocalDate.now()) // 사용자가 정한 투자 기간 최대 10년
+                    .build();
+
+            return investmentRepository.save(investment);
+        }
     }
+
 
     private double calculatePresentValueForIncome(double income, int year, double discountRate) {
         return income / Math.pow(1 + discountRate / 100, year);
@@ -201,7 +227,7 @@ public class InvestmentService {
         LocalDate endDate = calculateEndDate(user.getBirthdate());
         // 연 수익률 계산
         double annualizedReturnRate = calculateAnnualizedReturnRate(investment.getStartDate(), endDate, rateofreturn);
-
+        //userid로 넘겨줌
         double presentValue = expectedValueService.calculatePresentValue(userId);
         double refundRate = ((investAmount* (1+annualizedReturnRate)) / presentValue * 100);
         refundRate = Math.round(refundRate * 1000) / 1000.0;
@@ -272,7 +298,8 @@ public class InvestmentService {
         //그래프용 데이터
         UserProfileEntity userProfileEntity = userProfileRepository.findFirstByUserIdOrderByUpdatedAtDesc(userId)
                 .orElseThrow(() -> new RuntimeException("해당 유저를 찾을 수 없습니다."));
-        List<ExpectedIncomeEntity> incomes = expectedIncomeService.getExpectedIncomesByUserProfileId(userProfileEntity.getUserProfileId());
+        List<ExpectedIncomeEntity> incomes = expectedIncomeService.findByUserProfile_UserProfileId(userProfileEntity.getUserProfileId());
+//        System.out.println(incomes.toString());
         // 결과 반환
         return new InvestmentTempAllowanceDTO(availableAmount, investValue, progress, expectedIncome, refundRate, inflationRate,incomes);
     }
@@ -295,9 +322,11 @@ public class InvestmentService {
         return FiftyFifty;
     }
     public ReallyExitResponseDTO getInvestmentExitInfo(Integer userId) {
+
         InvestmentEntity investmentEntity = investmentRepository.findByUserId(userId)
                 .orElseThrow(() -> new RuntimeException("투자 정보를 찾을 수 없습니다."));
-
+        System.out.println(investmentEntity.toString());
+        System.out.println(userId);
         LocalDate startDate = investmentEntity.getStartDate();
         LocalDate endDate = investmentEntity.getEndDate();
         LocalDate currentMonth = LocalDate.now();
@@ -326,6 +355,7 @@ public class InvestmentService {
                 Long.valueOf(userId),
                 startDate.atStartOfDay(),
                 endDate.plusDays(1).atStartOfDay().minusSeconds(1));
+
 
         List<MonthlyPaymentDTO> monthlyPaymentDTOS = monthlyPayments.stream()
                 .map(obj -> new MonthlyPaymentDTO((String)obj[0], (Long)obj[1]))
