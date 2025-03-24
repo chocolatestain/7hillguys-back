@@ -1,6 +1,15 @@
 package com.shinhan.peoch.security.jwt;
 
+import java.io.IOException;
+
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
+
 import com.shinhan.peoch.auth.service.UserService;
+
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
@@ -8,13 +17,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.stereotype.Component;
-import org.springframework.web.filter.OncePerRequestFilter;
-
-import java.io.IOException;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -50,9 +52,8 @@ public class JwtFilter extends OncePerRequestFilter {
             return;
         }
 
-        // 3️⃣ JWT 유효성 검사
         if (!jwtUtil.validationToken(token)) {
-            log.warn("[JwtFilter] JWT가 유효하지 않음");
+            log.warn("[JwtFilter] JWT가 유효하지 않습니다! token: {}", token);
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "유효하지 않은 JWT입니다.");
             return;
         }
@@ -60,6 +61,17 @@ public class JwtFilter extends OncePerRequestFilter {
         // 4️⃣ 사용자 정보 추출
         String email = jwtUtil.getUserEmail(token);
         Long userId = jwtUtil.getUserId(token);
+        
+        log.info("[JwtFilter] JWT에서 추출한 email: {}, userId: {}", email, userId);
+
+        if (email == null || userId == null) {
+            log.warn("[JwtFilter] JWT에서 이메일 또는 userId 추출 실패");
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "JWT에서 사용자 정보를 추출할 수 없습니다.");
+            return;
+        }
+
+        UserDetails userDetails = userService.loadUserByUsername(email);
+        log.info("[JwtFilter] 로드된 UserDetails 객체: {}", userDetails);
 
         if (email == null || userId == null) {
             log.warn("[JwtFilter] JWT에서 이메일 또는 userId 추출 실패");
@@ -70,19 +82,13 @@ public class JwtFilter extends OncePerRequestFilter {
 //        log.info("[JwtFilter] 추출된 사용자 정보: 이메일={}, userId={}", email, userId);
 
         // 5️⃣ 사용자 인증 및 SecurityContext 업데이트
-        UserDetails userDetails = userService.loadUserByUsername(email);
-        if (userDetails == null) {
-            log.warn("[JwtFilter] 이메일에 해당하는 사용자 정보 없음: {}", email);
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "사용자 정보를 찾을 수 없습니다.");
-            return;
-        }
+  
 
         UsernamePasswordAuthenticationToken authentication =
-                new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        request.setAttribute("userId", userId); // ✅ userId를 request에 저장
-//        log.info("[JwtFilter] 사용자 인증 완료. SecurityContext 업데이트됨. 사용자: {}", email);
+        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
 
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+        log.info("[JwtFilter] SecurityContext에 인증 객체 저장 완료: {}", authentication.getPrincipal());
         filterChain.doFilter(request, response);
     }
 

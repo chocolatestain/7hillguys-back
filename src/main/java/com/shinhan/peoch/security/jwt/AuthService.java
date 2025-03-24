@@ -1,22 +1,22 @@
 package com.shinhan.peoch.security.jwt;
 
-import com.shinhan.peoch.auth.entity.UserEntity;
-import com.shinhan.peoch.exception.CustomException;
-import com.shinhan.repository.UserRepository;
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletRequest;
-import lombok.RequiredArgsConstructor;
+import java.time.Duration;
+import java.util.Map;
+
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.time.Duration;
-import java.util.Map;
+import com.shinhan.peoch.auth.entity.UserEntity;
+import com.shinhan.peoch.exception.CustomException;
+import com.shinhan.repository.UserRepository;
+
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -48,7 +48,7 @@ public class AuthService {
         // 4. HTTPOnly 쿠키 설정
         ResponseCookie jwtCookie = ResponseCookie.from("jwt", accessToken)
                 .httpOnly(true)                 // JavaScript에서 접근 불가 (XSS 보호)
-                .secure(true)                   // HTTPS 환경에서만 전송
+                .secure(false)                   // HTTPS 환경에서만 전송
                 .path("/")                      // 모든 경로에서 사용 가능
                 .maxAge(Duration.ofDays(7))     // 쿠키 유효 기간 설정
                 .build();

@@ -1,17 +1,19 @@
 package com.shinhan.peoch.auth.service;
 
-import com.shinhan.peoch.auth.dto.UserResponseDTO;
-import com.shinhan.peoch.auth.entity.UserEntity;
-import com.shinhan.peoch.security.SecurityUser;
-import com.shinhan.peoch.security.jwt.JwtUtil;
-import com.shinhan.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import com.shinhan.peoch.auth.dto.UserResponseDTO;
+import com.shinhan.peoch.auth.entity.UserEntity;
+import com.shinhan.peoch.security.SecurityUser;
+import com.shinhan.peoch.security.jwt.JwtUtil;
+import com.shinhan.repository.UserRepository;
+
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -40,14 +42,13 @@ public class UserService implements UserDetailsService {
     }
 
     @Override
-    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        System.out.println("---email: " + email + " ---");
-
+    public UserDetails loadUserByUsername(String email) {
         UserEntity user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("사용자를 찾을 수 없습니다."));
-
-        return new SecurityUser(user, jwtUtil);
+            .orElseThrow(() -> new UsernameNotFoundException("이메일 없음: " + email));
+    
+        return new SecurityUser(user);  
     }
+    
 
     public UserResponseDTO getCurrentUser(@AuthenticationPrincipal UserEntity userEntity) {
         if (userEntity == null) {

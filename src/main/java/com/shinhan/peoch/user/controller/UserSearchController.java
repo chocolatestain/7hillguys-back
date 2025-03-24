@@ -23,8 +23,11 @@ import com.shinhan.peoch.security.SecurityUser;
 import com.shinhan.peoch.user.dto.UserInfoDTO;
 import com.shinhan.peoch.user.service.UserSearchService;
 import com.shinhan.repository.InvestmentRepository;
+
+import lombok.extern.slf4j.Slf4j;
+@Slf4j
 @RestController
-@RequestMapping("/api/user")
+@RequestMapping("/api/usersearch")
 public class UserSearchController {
     @Autowired
     private InvestmentRepository investmentRepository;
@@ -84,12 +87,17 @@ public class UserSearchController {
     }
     @GetMapping("/usertype")
     public String getUserType(@AuthenticationPrincipal SecurityUser securityUser){
+        log.info("컨트롤러 진입. SecurityUser 객체: {}", securityUser);
+    
         if (securityUser == null) {
+            log.warn("SecurityUser가 null입니다. 인증되지 않은 사용자 요청 발생");
             throw new RuntimeException("인증되지 않은 사용자.");
         }
         String userType = securityUser.getRole();
+        log.info("User Type: {}", userType);
         return userType;
     }
+    
  
     @GetMapping("/cardDataTotal")
     public CardDataTotalResponseDTO getCardDataTotal(@RequestParam("userid") Long userid,
