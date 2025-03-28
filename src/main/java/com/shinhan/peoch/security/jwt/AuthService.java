@@ -4,7 +4,6 @@ import java.time.Duration;
 import java.util.Map;
 
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -17,6 +16,8 @@ import com.shinhan.repository.UserRepository;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.http.HttpStatus;
 
 @Service
 @RequiredArgsConstructor
@@ -37,21 +38,23 @@ public class AuthService {
         UserEntity user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new CustomException("해당 이메일의 사용자가 존재하지 않습니다.", HttpStatus.NOT_FOUND));
 
-        // 2. 비밀번호 검증(암호화된 password를 디코딩한 값과 입력한 패스워드 값이 다르면 null 반환)
-        if(!passwordEncoder.matches(password, user.getPassword())) {
+        // 2. 비밀번호 검증
+        if (!passwordEncoder.matches(password, user.getPassword())) {
             throw new CustomException("비밀번호가 일치하지 않습니다.", HttpStatus.UNAUTHORIZED);
         }
 
         // 3. JWT 토큰 생성
         String accessToken = jwtUtil.createAccessToken(user);
 
-        // 4. HTTPOnly 쿠키 설정
+        // 4. HTTPOnly 쿠키 설정 (SameSite 옵션 추가)
         ResponseCookie jwtCookie = ResponseCookie.from("jwt", accessToken)
-                .httpOnly(true)                 // JavaScript에서 접근 불가 (XSS 보호)
-                .secure(false)                   // HTTPS 환경에서만 전송
-                .path("/")                      // 모든 경로에서 사용 가능
-                .maxAge(Duration.ofDays(7))     // 쿠키 유효 기간 설정
-                .build();
+        .httpOnly(true)
+        .secure(false)         // 개발 환경에서 http 사용 시 false
+        .path("/")
+        .maxAge(Duration.ofDays(7))
+        .sameSite("Lax")       // 개발 환경에서는 Lax 사용을 고려
+        .build();
+
 
         // 5. 응답 반환
         return ResponseEntity.ok()
@@ -89,7 +92,7 @@ public class AuthService {
         Cookie[] cookies = request.getCookies();
         if (cookies != null) {
             for (Cookie cookie : cookies) {
-                if ("jwt".equals(cookie.getName())) { // JWT 쿠키 이름 확인 (프론트에서 보낸 쿠키 이름과 맞춰야 함)
+                if ("jwt".equals(cookie.getName())) {
                     return cookie.getValue();
                 }
             }

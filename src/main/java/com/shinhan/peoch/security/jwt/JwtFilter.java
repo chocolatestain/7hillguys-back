@@ -31,7 +31,7 @@ public class JwtFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         log.info("=== [JwtFilter] 요청 도착: {} ===", request.getRequestURI());
 
-        // 1 헤더 또는 쿠키에서 JWT 가져오기
+        // 1. 헤더 또는 쿠키에서 JWT 가져오기
         String token = resolveTokenFromHeader(request);
         if (token == null) {
             token = resolveTokenFromCookie(request);
@@ -43,25 +43,23 @@ public class JwtFilter extends OncePerRequestFilter {
             return;
         }
 
-//        log.info("[JwtFilter] 추출된 JWT: {}", token);
-
-        // 2️⃣ 블랙리스트 확인
+        // 2. 블랙리스트 확인
         if (tokenBlacklistService.isTokenBlacklisted(token)) {
             log.warn("[JwtFilter] 블랙리스트에 등록된 JWT 사용 감지. 접근 거부.");
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "블랙리스트에 등록된 토큰입니다.");
             return;
         }
 
+        // 3. JWT 검증
         if (!jwtUtil.validationToken(token)) {
             log.warn("[JwtFilter] JWT가 유효하지 않습니다! token: {}", token);
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "유효하지 않은 JWT입니다.");
             return;
         }
 
-        // 4️⃣ 사용자 정보 추출
+        // 4. JWT에서 사용자 정보 추출
         String email = jwtUtil.getUserEmail(token);
         Long userId = jwtUtil.getUserId(token);
-        
         log.info("[JwtFilter] JWT에서 추출한 email: {}, userId: {}", email, userId);
 
         if (email == null || userId == null) {
@@ -70,29 +68,19 @@ public class JwtFilter extends OncePerRequestFilter {
             return;
         }
 
+        // 5. UserDetails 로드 후 인증 객체 생성
         UserDetails userDetails = userService.loadUserByUsername(email);
         log.info("[JwtFilter] 로드된 UserDetails 객체: {}", userDetails);
 
-        if (email == null || userId == null) {
-            log.warn("[JwtFilter] JWT에서 이메일 또는 userId 추출 실패");
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "JWT에서 사용자 정보를 추출할 수 없습니다.");
-            return;
-        }
-
-//        log.info("[JwtFilter] 추출된 사용자 정보: 이메일={}, userId={}", email, userId);
-
-        // 5️⃣ 사용자 인증 및 SecurityContext 업데이트
-  
-
         UsernamePasswordAuthenticationToken authentication =
-        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-
+                new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
         SecurityContextHolder.getContext().setAuthentication(authentication);
         log.info("[JwtFilter] SecurityContext에 인증 객체 저장 완료: {}", authentication.getPrincipal());
+        
         filterChain.doFilter(request, response);
     }
 
-    // ✅ Authorization 헤더에서 JWT 가져오기
+    // Authorization 헤더에서 JWT 가져오기
     private String resolveTokenFromHeader(HttpServletRequest request) {
         String bearerToken = request.getHeader("Authorization");
         if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
@@ -101,25 +89,29 @@ public class JwtFilter extends OncePerRequestFilter {
         return null;
     }
 
-    // ✅ 쿠키에서 JWT 가져오기
+    // 쿠키에서 JWT 가져오기 (디버깅 로그 추가)
     private String resolveTokenFromCookie(HttpServletRequest request) {
-        if (request.getCookies() != null) {
-            for (Cookie cookie : request.getCookies()) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                log.info("[JwtFilter] 발견된 쿠키: {} = {}", cookie.getName(), cookie.getValue());
                 if ("jwt".equals(cookie.getName())) {
                     return cookie.getValue();
                 }
             }
+        } else {
+            log.info("[JwtFilter] 요청에 쿠키가 존재하지 않습니다.");
         }
         return null;
     }
 
-    // ✅ 로그인 및 회원가입 경로에서 필터링 제외
+    // 로그인, 회원가입 등 인증 없이 접근 가능한 경로는 필터 제외
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
         return path.startsWith("/api/auth/login") ||
-                path.startsWith("/api/auth/register") ||
-                path.startsWith("/public/") ||
-                path.startsWith("/api/docs");
+               path.startsWith("/api/auth/register") ||
+               path.startsWith("/public/") ||
+               path.startsWith("/api/docs");
     }
 }

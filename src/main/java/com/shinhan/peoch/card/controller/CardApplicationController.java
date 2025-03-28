@@ -28,7 +28,7 @@ import java.util.Optional;
 
 @Slf4j
 @RestController
-@RequestMapping("/card")
+@RequestMapping("/api/card")
 @RequiredArgsConstructor
 public class CardApplicationController {
     private final JwtTokenProvider jwtTokenProvider;

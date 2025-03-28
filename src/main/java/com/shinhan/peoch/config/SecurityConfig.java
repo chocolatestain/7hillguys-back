@@ -15,6 +15,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import java.util.Arrays;
 
 @Configuration
 @EnableWebSecurity
@@ -27,7 +28,7 @@ public class SecurityConfig {
     private static final String[] USER_LIST = {"/api/review/**", "/api/investment/status", "/api/contract/**","/api/investment/**"};
     private static final String[] ADMIN_LIST ={};
     private static final String[] WHITE_LIST={
-           "/api/user/**", "/api/auth/register", "/api/auth/login", "/api/review/save", "/api/review/file", "/api/auth/logout"
+           "/api/user/**", "/api/auth/register", "/api/auth/login", "/api/review/save", "/api/review/file", "/api/auth/logout", "/api/usersearch/**"
     };
 
     @Bean
@@ -64,13 +65,14 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
 
         // ✅ 모든 도메인 허용
-        configuration.addAllowedOriginPattern("*");
-
+    
         // ✅ 모든 HTTP 메서드 허용
-        configuration.addAllowedMethod("*");
+        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000","http://192.168.0.172", "http://192.168.0.172:3000","http://192.168.0.172:8080","http://peoch.shinhanacademy.co.kr","http://peoch.shinhanacademy.co.kr:8080","http://peoch.shinhanacademy.co.kr:3000")); 
+        
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
 
         // ✅ 모든 헤더 허용
-        configuration.addAllowedHeader("*");
+        configuration.setAllowedHeaders(Arrays.asList("*"));
 
         // ✅ 쿠키 및 인증 정보 허용
         configuration.setAllowCredentials(true);
