@@ -291,3 +291,11 @@ src/main/resources/application.yml
 
 # Ignore macOS system files
 .DS_Store
+
+
+# 빌드 산출물 
+/backend.zip
+/build/
+/out/
+/src/uploads/
+/*.log
