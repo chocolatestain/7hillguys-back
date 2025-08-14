@@ -31,56 +31,69 @@ public class SecurityConfig {
            "/api/user/**", "/api/auth/register", "/api/auth/login", "/api/review/save", "/api/review/file", "/api/auth/logout", "/api/usersearch/**"
     };
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
-        httpSecurity
-//                .cors(Customizer.withDefaults())
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .csrf(AbstractHttpConfigurer::disable)
-                .authorizeHttpRequests(auth -> {
-                    // 인증 없이 접근 가능한 엔드포인트
-                    auth.requestMatchers(WHITE_LIST).permitAll();
-                    // 일반 사용자 전용 엔드포인트
-                    auth.requestMatchers(USER_LIST).hasRole("USER");
-                    // 관리자 전용 엔드포인트
-                    auth.requestMatchers(ADMIN_LIST).hasRole("ADMIN");
-                    // 로그아웃은 인증된 사용자만 접근 가능
-                    auth.requestMatchers("/api/auth/logout").authenticated();
-                    // 그 외의 모든 요청은 인증 필요
-                    auth.anyRequest().authenticated();
-                });
+@Bean
+public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    http
+        .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+        .csrf(AbstractHttpConfigurer::disable)
+        .authorizeHttpRequests(auth -> {
+            // actuator/health 외에도 전체 actuator 허용(옵션)
+            auth.requestMatchers("/actuator/**").permitAll();
+            // 에러/정적
+            auth.requestMatchers("/error", "/favicon.ico", "/static/**", "/css/**", "/js/**", "/images/**").permitAll();
 
-        // JwtFilter를 UsernamePasswordAuthenticationFilter 전에 추가
-        httpSecurity.addFilterBefore(new JwtFilter(userService, jwtUtil, tokenBlacklistService),
-                UsernamePasswordAuthenticationFilter.class);
-//        httpSecurity.authorizeHttpRequests(auth -> {
-//            auth.anyRequest().permitAll();
-//        });
-        return httpSecurity.build();
-    }
+            // 공개 엔드포인트만 나열
+            auth.requestMatchers(
+                "/api/auth/register",
+                "/api/auth/login",
+                "/api/auth/userId",    
+                "/api/user/**",
+                "/api/review/save",
+                "/api/review/file",
+                "/api/usersearch/**",
+                "/actuator/**",
+                "/api/actuator/**"
+            ).permitAll();
 
-    // CORS 설정 Bean: 필요에 따라 허용 도메인 및 메서드를 조정하세요.
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
+            // 사용자/관리자 권한 경로
+            auth.requestMatchers("/api/review/**", "/api/investment/status", "/api/contract/**", "/api/investment/**").hasRole("USER");
+            auth.requestMatchers("/api/admin/**").hasRole("ADMIN");
 
-        // ✅ 모든 도메인 허용
-    
-        // ✅ 모든 HTTP 메서드 허용
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000","http://192.168.0.172", "http://192.168.0.172:3000","http://192.168.0.172:8080","http://peoch.shinhanacademy.co.kr","http://peoch.shinhanacademy.co.kr:8080","http://peoch.shinhanacademy.co.kr:3000")); 
-        
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+            // 로그아웃은 인증 필요
+            auth.requestMatchers("/api/auth/logout").authenticated();
 
-        // ✅ 모든 헤더 허용
-        configuration.setAllowedHeaders(Arrays.asList("*"));
+            // 나머지는 인증 필요
+            auth.anyRequest().authenticated();
+        });
 
-        // ✅ 쿠키 및 인증 정보 허용
-        configuration.setAllowCredentials(true);
+    // JwtFilter는 UsernamePasswordAuthenticationFilter 이전
+    http.addFilterBefore(new JwtFilter(userService, jwtUtil, tokenBlacklistService),
+            UsernamePasswordAuthenticationFilter.class);
 
-        // URL 패턴에 대해 CORS 설정 적용
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
-    }
+    return http.build();
+}
+
+@Bean
+public CorsConfigurationSource corsConfigurationSource() {
+    CorsConfiguration cfg = new CorsConfiguration();
+
+    // allowCredentials(true) 사용 시 * 불가 → 정확/패턴 지정
+    // 필요하면 둘 중 하나만 사용: setAllowedOrigins() 또는 setAllowedOriginPatterns()
+    cfg.setAllowedOriginPatterns(Arrays.asList(
+        "http://lvndr.kro.kr",
+        "https://lvndr.kro.kr",
+        "http://localhost:*",
+        "http://192.168.0.172:*"
+    ));
+
+    cfg.setAllowedMethods(Arrays.asList("GET","POST","PUT","DELETE","OPTIONS","PATCH"));
+    cfg.setAllowedHeaders(Arrays.asList("*"));
+    cfg.setAllowCredentials(true);
+    cfg.setMaxAge(3600L);
+
+    UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+    source.registerCorsConfiguration("/**", cfg);
+    return source;
+}
 
 }

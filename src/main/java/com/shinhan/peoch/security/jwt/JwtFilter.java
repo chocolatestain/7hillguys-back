@@ -106,12 +106,22 @@ public class JwtFilter extends OncePerRequestFilter {
     }
 
     // 로그인, 회원가입 등 인증 없이 접근 가능한 경로는 필터 제외
-    @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) {
-        String path = request.getRequestURI();
-        return path.startsWith("/api/auth/login") ||
-               path.startsWith("/api/auth/register") ||
-               path.startsWith("/public/") ||
-               path.startsWith("/api/docs");
-    }
+@Override
+protected boolean shouldNotFilter(HttpServletRequest request) {
+    String p = request.getRequestURI();
+
+    return
+        p.startsWith("/api/auth/login") ||
+        p.startsWith("/api/auth/register") ||
+        p.startsWith("/public/") ||
+        p.startsWith("/actuator/") ||
+        p.equals("/actuator/info") ||
+        p.startsWith("/api/docs") ||
+        p.startsWith("/error") ||
+        p.startsWith("/favicon") ||
+        p.startsWith("/static/") || p.startsWith("/css/") ||
+        p.startsWith("/js/") || p.startsWith("/images/") ||
+        p.startsWith("/api/actuator/");
+        
+}
 }
