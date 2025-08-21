@@ -5,6 +5,7 @@ import com.itextpdf.io.image.ImageData;
 import com.itextpdf.io.image.ImageDataFactory;
 import com.itextpdf.kernel.font.PdfFont;
 import com.itextpdf.kernel.font.PdfFontFactory;
+import com.itextpdf.kernel.font.PdfFontFactory.EmbeddingStrategy;
 import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.layout.Document;
@@ -22,6 +23,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
 
 import java.io.ByteArrayOutputStream;
 import java.text.NumberFormat;
@@ -55,12 +59,13 @@ public byte[] generateAndSaveContractPdf(Integer userId, String base64Signature)
         // ✅ 한글 폰트: 클래스패스에서 로드
         PdfFont font;
         try {
-            Resource fontRes = new ClassPathResource("font/NotoSansKR-Regular.ttf"); // ← src/main/resources/font/ 아래에 존재
+            Resource fontRes = new ClassPathResource("font/NotoSansKR-Regular.ttf");
             byte[] fontBytes;
             try (var is = fontRes.getInputStream()) {
                 fontBytes = is.readAllBytes();
             }
-            font = PdfFontFactory.createFont(fontBytes, PdfEncodings.IDENTITY_H, true); // ← 임베드 + 한글 글꼴
+            font = PdfFontFactory.createFont(fontBytes, PdfEncodings.IDENTITY_H, EmbeddingStrategy.PREFER_EMBEDDED);
+
         } catch (Exception e) {
             log.error("🚨 폰트 파일 로드 실패! classpath:font/NotoSansKR-Regular.ttf", e);
             throw new RuntimeException("🚨 폰트 파일 로드 실패", e);
